@@ -8,6 +8,7 @@ type IMetrica interface {
 	GetValue() (float64, error)
 	GetName() string
 	GetUnits() string
+	ClearSentData()
 }
 
 type MetricaValue interface{}
