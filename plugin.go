@@ -33,12 +33,15 @@ type NewrelicPlugin struct {
 	Verbose              bool         `json:"-"`
 	LicenseKey           string       `json:"-"`
 	PollIntervalInSecond int          `json:"-"`
+	FatalThreshold       int          `json:"-"`
+	FatalCount           int          `json:"-"`
 }
 
-func NewNewrelicPlugin(version string, licenseKey string, pollInterval int) *NewrelicPlugin {
+func NewNewrelicPlugin(version string, licenseKey string, pollInterval, fatalThreshold int) *NewrelicPlugin {
 	plugin := &NewrelicPlugin{
 		LicenseKey:           licenseKey,
 		PollIntervalInSecond: pollInterval,
+		FatalThreshold:       fatalThreshold,
 	}
 
 	plugin.Agent = NewAgent(version)
@@ -73,6 +76,18 @@ func (plugin *NewrelicPlugin) Harvest() error {
 		}
 
 		if err, isFatal := plugin.CheckResponse(httpCode); isFatal {
+			plugin.FatalCount++
+			if plugin.FatalCount > plugin.FatalThreshold {
+				// too many fatal errors, clear the data for the next try
+				// this mechanism exists because I have seen new relic
+				// throw endless 400s when the agent failed to report
+				// for an extended period and then tried to update with
+				// aggregated data for that extended period. Clearing
+				// stale data should prevent getting into that situation
+				// with new relic's API.
+				plugin.ClearSentData()
+				plugin.FatalCount = 0
+			}
 			log.Printf("Got fatal error:%v\n", err)
 			return err
 		} else {
@@ -169,7 +184,7 @@ func (plugin *NewrelicPlugin) CheckResponse(httpResponseCode int) (error, bool) 
 	case http.StatusRequestEntityTooLarge:
 		{
 			err = fmt.Errorf("Too many metrics were sent in one request, or too many components (instances) were specified in one request, or other single-request limits were reached.\n")
-			//discard metrics
+			// discard metrics
 			plugin.ClearSentData()
 		}
 	case http.StatusInternalServerError, http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout:
