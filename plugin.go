@@ -93,8 +93,8 @@ func (plugin *NewrelicPlugin) Harvest() error {
 		} else {
 			if err != nil {
 				log.Printf("WARNING: %v", err)
+				return err
 			}
-			return err
 		}
 	}
 	return nil
@@ -133,21 +133,18 @@ func (plugin *NewrelicPlugin) SendMetricas() (int, error) {
 
 	if httpRequest, err := http.NewRequest("POST", NEWRELIC_API_URL, strings.NewReader(jsonAsString)); err != nil {
 		return 0, err
-	} else {
-		httpRequest.Header.Set("X-License-Key", plugin.LicenseKey)
-		httpRequest.Header.Set("Content-Type", "application/json")
-		httpRequest.Header.Set("Accept", "application/json")
-
-		if httpResponse, err := plugin.Client.Do(httpRequest); err != nil {
-			return 0, err
-		} else {
-			defer httpResponse.Body.Close()
-			return httpResponse.StatusCode, nil
-		}
 	}
 
-	// we will never get there
-	return 0, nil
+	httpRequest.Header.Set("X-License-Key", plugin.LicenseKey)
+	httpRequest.Header.Set("Content-Type", "application/json")
+	httpRequest.Header.Set("Accept", "application/json")
+
+	if httpResponse, err := plugin.Client.Do(httpRequest); err != nil {
+		return 0, err
+	}
+
+	defer httpResponse.Body.Close()
+	return httpResponse.StatusCode, nil
 }
 
 func (plugin *NewrelicPlugin) ClearSentData() {
