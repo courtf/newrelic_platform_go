@@ -131,7 +131,8 @@ func (plugin *NewrelicPlugin) SendMetricas() (int, error) {
 		log.Printf("Send data:%s \n", jsonAsString)
 	}
 
-	if httpRequest, err := http.NewRequest("POST", NEWRELIC_API_URL, strings.NewReader(jsonAsString)); err != nil {
+	httpRequest, err := http.NewRequest("POST", NEWRELIC_API_URL, strings.NewReader(jsonAsString))
+	if err != nil {
 		return 0, err
 	}
 
@@ -139,7 +140,8 @@ func (plugin *NewrelicPlugin) SendMetricas() (int, error) {
 	httpRequest.Header.Set("Content-Type", "application/json")
 	httpRequest.Header.Set("Accept", "application/json")
 
-	if httpResponse, err := plugin.Client.Do(httpRequest); err != nil {
+	httpResponse, err := plugin.Client.Do(httpRequest)
+	if err != nil {
 		return 0, err
 	}
 
